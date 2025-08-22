@@ -93,20 +93,20 @@ app.listen(port, host, () => {
   dirs.forEach(dir => {
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
-      console.log(\`✅ Dossier \${dir} créé\`);
+      console.log(`✅ Dossier ${dir} créé`);
     } else {
-      console.log(\`✅ Dossier \${dir} existe déjà\`);
+      console.log(`✅ Dossier ${dir} existe déjà`);
     }
   });
 
   // Étape 6: Création du script de démarrage
-  const startScript = \`#!/bin/bash
+  const startScript = `#!/bin/bash
 echo "🚀 Démarrage de l'application Photo Uploader SMB..."
-echo "📍 Port: \${deployConfig.serverPort}"
-echo "🌐 Host: \${deployConfig.serverHost}"
+echo "📍 Port: ${deployConfig.serverPort}"
+echo "🌐 Host: ${deployConfig.serverHost}"
 echo ""
 node server.js
-\`;
+`;
 
   writeFileSync('start.sh', startScript);
   execSync('chmod +x start.sh');
@@ -118,10 +118,10 @@ node server.js
   console.log('   1. Exécutez: node server.js');
   console.log('   2. Ou utilisez: ./start.sh');
   console.log('   3. Ou utilisez: npm run serve');
-  console.log(\`\n🌐 L'application sera accessible sur:`);
-  console.log(\`   - Local: http://localhost:\${deployConfig.serverPort}\`);
-  console.log(\`   - Réseau: http://[votre-ip]:\${deployConfig.serverPort}\`);
-  console.log(\`\n📁 Fichiers générés:`);
+  console.log(`\n🌐 L'application sera accessible sur:`);
+  console.log(`   - Local: http://localhost:${deployConfig.serverPort}`);
+  console.log(`   - Réseau: http://[votre-ip]:${deployConfig.serverPort}`);
+  console.log(`\n📁 Fichiers générés:`);
   console.log('   - server.js (serveur de production)');
   console.log('   - start.sh (script de démarrage)');
   console.log('   - dist/ (fichiers de production)');

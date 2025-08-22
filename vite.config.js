@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     allowedHosts: true,
-    port: 3131
+    port: 3131,
+    host: '192.168.12.200'
   },
   resolve: {
     alias: {

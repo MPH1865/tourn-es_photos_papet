@@ -3,9 +3,9 @@ export const serverConfig = {
   // Configuration du serveur de développement
   development: {
     port: 3131,
-    host: 'localhost',
+    host: '192.168.12.200',
     cors: {
-      origin: ['http://localhost:3131', 'http://127.0.0.1:3131'],
+      origin: ['http://192.168.12.200:3131', 'http://localhost:3131', 'http://127.0.0.1:3131'],
       credentials: true
     }
   },

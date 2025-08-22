@@ -3,7 +3,7 @@ import { Upload, Image, CheckCircle, AlertCircle, Folder } from 'lucide-react'
 import UploadZone from '@/components/UploadZone'
 import PhotoPreview from '@/components/PhotoPreview'
 import UploadProgress from '@/components/UploadProgress'
-import { uploadPhotosToSMB } from '@/services/smbService'
+import { uploadPhotosToSMB, generateFolderName } from '@/services/smbService'
 
 interface UploadedPhoto {
   id: string
@@ -76,16 +76,6 @@ const PhotoUploader: React.FC = () => {
     }
   }
 
-  const generateFolderName = (): string => {
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
-    const hours = String(now.getHours()).padStart(2, '0')
-    const minutes = String(now.getMinutes()).padStart(2, '0')
-    
-    return `${year}-${month}-${day}_${hours}h${minutes}`
-  }
 
   const removePhoto = (id: string) => {
     setPhotos(prev => {

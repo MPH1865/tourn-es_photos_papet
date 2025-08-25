@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Settings, Server, Folder, Save, Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { Settings, Server, Folder, Save, Eye, EyeOff, ArrowLeft, Wifi, WifiOff } from 'lucide-react'
+import { checkSMBConnection } from '@/services/smbService'
 
 interface SMBConfigProps {
   onBack: () => void
@@ -27,6 +28,8 @@ const SMBConfig: React.FC<SMBConfigProps> = ({ onBack }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
+  const [isTestingConnection, setIsTestingConnection] = useState(false)
+  const [connectionResult, setConnectionResult] = useState<{ success: boolean; message: string } | null>(null)
 
   const handleInputChange = (field: keyof SMBSettings, value: string) => {
     setSettings(prev => ({
@@ -53,6 +56,23 @@ const SMBConfig: React.FC<SMBConfigProps> = ({ onBack }) => {
     setSaveMessage('Configuration sauvegardée avec succès!')
     
     setTimeout(() => setSaveMessage(''), 3000)
+  }
+
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true)
+    setConnectionResult(null)
+    
+    try {
+      const result = await checkSMBConnection()
+      setConnectionResult(result)
+    } catch (error) {
+      setConnectionResult({
+        success: false,
+        message: 'Erreur lors du test de connexion'
+      })
+    } finally {
+      setIsTestingConnection(false)
+    }
   }
 
   const formatExamples = [
@@ -213,6 +233,43 @@ const SMBConfig: React.FC<SMBConfigProps> = ({ onBack }) => {
                 <code className="text-sm text-gray-800 bg-white px-2 py-1 rounded border">
                   \\{settings.serverAddress || 'serveur'}\{settings.shareName}{settings.basePath}\{formatExamples.find(f => f.format === settings.folderNameFormat)?.example || '2024-08-22_14h30'}
                 </code>
+              </div>
+
+              {/* Test de connexion */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium text-gray-700">Test de connexion</h4>
+                  <button
+                    onClick={handleTestConnection}
+                    disabled={isTestingConnection}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Test en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wifi className="h-4 w-4" />
+                        <span>Tester la connexion</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                {connectionResult && (
+                  <div className={`flex items-center space-x-2 text-sm ${
+                    connectionResult.success ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {connectionResult.success ? (
+                      <Wifi className="h-4 w-4" />
+                    ) : (
+                      <WifiOff className="h-4 w-4" />
+                    )}
+                    <span>{connectionResult.message}</span>
+                  </div>
+                )}
               </div>
 
               {/* Boutons d'action */}

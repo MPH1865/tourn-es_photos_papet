@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react'
-import { Upload, Image, CheckCircle, AlertCircle, Folder } from 'lucide-react'
+import { Upload, Image, CheckCircle, AlertCircle, Folder, Send } from 'lucide-react'
 import UploadZone from '@/components/UploadZone'
 import PhotoPreview from '@/components/PhotoPreview'
 import UploadProgress from '@/components/UploadProgress'
-import { uploadPhotosToSMB, generateFolderName } from '@/services/smbService'
+import { uploadPhotosToSMB, generateFolderName, sendPhotosToSMB } from '@/services/smbService'
 
 interface UploadedPhoto {
   id: string
@@ -18,7 +18,9 @@ interface UploadedPhoto {
 const PhotoUploader: React.FC = () => {
   const [photos, setPhotos] = useState<UploadedPhoto[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [isSending, setIsSending] = useState(false)
   const [currentFolder, setCurrentFolder] = useState<string>('')
+  const [sendMessage, setSendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const handleFilesSelected = useCallback((files: File[]) => {
     const newPhotos: UploadedPhoto[] = files.map(file => ({
@@ -76,6 +78,37 @@ const PhotoUploader: React.FC = () => {
     }
   }
 
+  const handleSendPhotos = async () => {
+    const successPhotos = photos.filter(photo => photo.status === 'success')
+    if (successPhotos.length === 0) return
+
+    setIsSending(true)
+    setSendMessage(null)
+
+    try {
+      const result = await sendPhotosToSMB(successPhotos, (progress) => {
+        // Optionnel: afficher la progression d'envoi
+        console.log(`Envoi en cours: ${progress}%`)
+      })
+
+      if (result.success) {
+        setSendMessage({ type: 'success', text: result.message })
+        // Vider la liste après envoi réussi
+        clearAll()
+      } else {
+        setSendMessage({ type: 'error', text: result.message })
+      }
+    } catch (error) {
+      setSendMessage({ 
+        type: 'error', 
+        text: 'Erreur lors de l\'envoi des photos' 
+      })
+    } finally {
+      setIsSending(false)
+      // Effacer le message après 5 secondes
+      setTimeout(() => setSendMessage(null), 5000)
+    }
+  }
 
   const removePhoto = (id: string) => {
     setPhotos(prev => {
@@ -143,19 +176,31 @@ const PhotoUploader: React.FC = () => {
                 <button
                   onClick={clearAll}
                   className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-                  disabled={isUploading}
+                  disabled={isUploading || isSending}
                 >
                   Tout effacer
                 </button>
                 {pendingCount > 0 && (
                   <button
                     onClick={handleUpload}
-                    disabled={isUploading}
+                    disabled={isUploading || isSending}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
                   >
                     <Upload className="h-4 w-4" />
                     <span>
                       {isUploading ? 'Upload en cours...' : `Uploader ${pendingCount} photo${pendingCount > 1 ? 's' : ''}`}
+                    </span>
+                  </button>
+                )}
+                {successCount > 0 && (
+                  <button
+                    onClick={handleSendPhotos}
+                    disabled={isUploading || isSending}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    <span>
+                      {isSending ? 'Envoi en cours...' : `Envoyer ${successCount} photo${successCount > 1 ? 's' : ''}`}
                     </span>
                   </button>
                 )}
@@ -173,6 +218,23 @@ const PhotoUploader: React.FC = () => {
             </div>
 
             {isUploading && <UploadProgress />}
+            
+            {sendMessage && (
+              <div className={`p-4 rounded-lg ${
+                sendMessage.type === 'success' 
+                  ? 'bg-green-50 text-green-800 border border-green-200' 
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}>
+                <div className="flex items-center space-x-2">
+                  {sendMessage.type === 'success' ? (
+                    <CheckCircle className="h-5 w-5" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5" />
+                  )}
+                  <span>{sendMessage.text}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -11,7 +11,7 @@ const __dirname = dirname(__filename);
 // Configuration de déploiement
 const deployConfig = {
   buildDir: 'dist',
-  serverPort: 3000,
+  serverPort: 3131,
   serverHost: '0.0.0.0'
 };
 

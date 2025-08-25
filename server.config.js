@@ -12,10 +12,10 @@ export const serverConfig = {
 
   // Configuration de production
   production: {
-    port: process.env.PORT || 8080,
+    port: process.env.PORT || 3131,
     host: '0.0.0.0',
     cors: {
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || ['https://yourdomain.com'],
+      origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://192.168.12.200:3131', 'http://localhost:3131', 'http://127.0.0.1:3131'],
       credentials: true
     }
   },

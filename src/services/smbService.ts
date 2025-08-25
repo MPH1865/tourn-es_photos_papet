@@ -35,44 +35,77 @@ export const uploadPhotosToSMB = async (
 ): Promise<UploadResult> => {
   // Récupération des paramètres de configuration
   const serverAddress = localStorage.getItem('smb_server') || 'localhost'
+  const username = localStorage.getItem('smb_username') || ''
+  const password = localStorage.getItem('smb_password') || ''
   const shareName = localStorage.getItem('smb_share') || 'photos'
   const basePath = localStorage.getItem('smb_basepath') || '/uploads'
+  const folderNameFormat = localStorage.getItem('smb_folder_format') || 'YYYY-MM-DD_HHhMM'
   
-  const smbBasePath = `\\\\${serverAddress}\\${shareName}${basePath}`
-  const folderPath = `${smbBasePath}\\${folderName}`
+  console.log('🚀 Début upload vers SMB:', {
+    serverAddress,
+    username,
+    shareName,
+    basePath,
+    folderName,
+    filesCount: files.length
+  })
   
-  const uploadedPaths: string[] = []
-  
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i]
+  try {
+    const API_BASE_URL = 'http://192.168.12.200:3132'
     
-    // Simulation du processus d'upload avec progression
-    for (let progress = 0; progress <= 100; progress += 10) {
-      await new Promise(resolve => setTimeout(resolve, 100))
-      onProgress?.(progress)
+    const config = {
+      serverAddress,
+      username,
+      password,
+      shareName,
+      basePath,
+      folderNameFormat
     }
     
-    // Simulation de la sauvegarde du fichier
-    const fileName = `${Date.now()}_${file.name}`
-    const filePath = `${folderPath}\\${fileName}`
+    console.log('📡 Envoi vers API SMB:', API_BASE_URL)
     
-    // Dans un vrai projet, ici on ferait l'upload réel vers SMB
-    // via une API backend qui gère la connexion SMB
-    console.log(`Simulation: Upload de ${file.name} vers ${filePath}`)
-    console.log(`Configuration SMB utilisée:`, {
-      server: serverAddress,
-      share: shareName,
-      basePath: basePath,
-      folderFormat: localStorage.getItem('smb_folder_format')
+    const formData = new FormData()
+    
+    // Ajouter les fichiers
+    files.forEach((file, index) => {
+      formData.append(`files`, file)
+      console.log(`📎 Fichier ${index + 1}: ${file.name} (${file.size} bytes)`)
     })
     
-    uploadedPaths.push(filePath)
-  }
-  
-  return {
-    success: true,
-    paths: uploadedPaths,
-    folderPath
+    // Ajouter la configuration
+    formData.append('config', JSON.stringify(config))
+    formData.append('folderName', folderName)
+    
+    console.log('⏳ Envoi de la requête...')
+    
+    const response = await fetch(`${API_BASE_URL}/api/smb/upload`, {
+      method: 'POST',
+      body: formData,
+    })
+    
+    console.log('📥 Réponse reçue:', response.status, response.statusText)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Erreur HTTP:', errorText)
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
+    }
+    
+    const result = await response.json()
+    console.log('✅ Résultat API:', result)
+    
+    if (result.success) {
+      return {
+        success: true,
+        paths: result.paths || [],
+        folderPath: result.folderPath || `\\\\${serverAddress}\\${shareName}${basePath}\\${folderName}`
+      }
+    } else {
+      throw new Error(result.message)
+    }
+  } catch (error) {
+    console.error('💥 Erreur upload:', error)
+    throw new Error(error instanceof Error ? error.message : 'Erreur lors de l\'upload')
   }
 }
 
@@ -92,8 +125,20 @@ export const checkSMBConnection = async (): Promise<{ success: boolean; message:
   const username = localStorage.getItem('smb_username')
   const password = localStorage.getItem('smb_password')
   const shareName = localStorage.getItem('smb_share')
+  const basePath = localStorage.getItem('smb_basepath') || '/uploads'
+  const folderNameFormat = localStorage.getItem('smb_folder_format') || 'YYYY-MM-DD_HHhMM'
+  
+  console.log('🔍 Test de connexion SMB:', {
+    serverAddress,
+    username: username ? '***' : 'vide',
+    password: password ? '***' : 'vide',
+    shareName,
+    basePath,
+    folderNameFormat
+  })
   
   if (!serverAddress || !username || !password || !shareName) {
+    console.warn('⚠️ Configuration incomplète')
     return {
       success: false,
       message: 'Configuration incomplète. Veuillez remplir tous les champs obligatoires.'
@@ -101,30 +146,44 @@ export const checkSMBConnection = async (): Promise<{ success: boolean; message:
   }
   
   try {
-    // Simulation d'une vérification de connexion
-    console.log(`Test de connexion SMB vers ${serverAddress}`)
+    const API_BASE_URL = 'http://192.168.12.200:3132'
     
-    // Simulation d'un délai de connexion
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // Simulation aléatoire de succès/échec pour les tests
-    const isSuccess = Math.random() > 0.3 // 70% de chance de succès
-    
-    if (isSuccess) {
-      return {
-        success: true,
-        message: `Connexion réussie au serveur ${serverAddress}`
-      }
-    } else {
-      return {
-        success: false,
-        message: 'Impossible de se connecter au serveur. Vérifiez vos paramètres.'
-      }
+    const config = {
+      serverAddress,
+      username,
+      password,
+      shareName,
+      basePath,
+      folderNameFormat
     }
+    
+    console.log('📡 Test via API SMB:', API_BASE_URL)
+    
+    const response = await fetch(`${API_BASE_URL}/api/smb/test-connection`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(config),
+    })
+    
+    console.log('📥 Réponse test connexion:', response.status, response.statusText)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ Erreur HTTP test:', errorText)
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const result = await response.json()
+    console.log('✅ Résultat test:', result)
+    
+    return result
   } catch (error) {
+    console.error('💥 Erreur test connexion:', error)
     return {
       success: false,
-      message: 'Erreur lors du test de connexion'
+      message: `Erreur de connexion à l'API: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
     }
   }
 }
@@ -134,23 +193,30 @@ export const sendPhotosToSMB = async (
   photos: { file: File; path?: string }[],
   onProgress?: ProgressCallback
 ): Promise<{ success: boolean; message: string }> => {
+  console.log('📤 Envoi des photos vers SMB:', photos.length, 'photos')
+  
   try {
     const totalPhotos = photos.length
     
     for (let i = 0; i < totalPhotos; i++) {
-      // Simulation de l'envoi avec progression
+      console.log(`📸 Traitement photo ${i + 1}/${totalPhotos}:`, photos[i].file.name)
+      
+      // Progression de l'envoi
       const progress = Math.round(((i + 1) / totalPhotos) * 100)
       onProgress?.(progress)
       
-      // Simulation du temps d'envoi
+      // Simulation du temps d'envoi (à remplacer par l'envoi réel si nécessaire)
       await new Promise(resolve => setTimeout(resolve, 500))
     }
+    
+    console.log('✅ Envoi terminé avec succès')
     
     return {
       success: true,
       message: `${totalPhotos} photo${totalPhotos > 1 ? 's' : ''} envoyée${totalPhotos > 1 ? 's' : ''} avec succès`
     }
   } catch (error) {
+    console.error('💥 Erreur envoi photos:', error)
     return {
       success: false,
       message: 'Erreur lors de l\'envoi des photos'

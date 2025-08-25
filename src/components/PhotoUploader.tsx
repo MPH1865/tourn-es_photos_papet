@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react'
-import { Upload, Image, CheckCircle, AlertCircle, Folder, Send } from 'lucide-react'
+import { Upload, Image, CheckCircle, AlertCircle, Folder, Send, Terminal } from 'lucide-react'
 import UploadZone from '@/components/UploadZone'
 import PhotoPreview from '@/components/PhotoPreview'
 import UploadProgress from '@/components/UploadProgress'
+import LogViewer from '@/components/LogViewer'
 import { uploadPhotosToSMB, generateFolderName, sendPhotosToSMB } from '@/services/smbService'
 
 interface UploadedPhoto {
@@ -21,6 +22,7 @@ const PhotoUploader: React.FC = () => {
   const [isSending, setIsSending] = useState(false)
   const [currentFolder, setCurrentFolder] = useState<string>('')
   const [sendMessage, setSendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showLogs, setShowLogs] = useState(false)
 
   const handleFilesSelected = useCallback((files: File[]) => {
     const newPhotos: UploadedPhoto[] = files.map(file => ({
@@ -38,13 +40,17 @@ const PhotoUploader: React.FC = () => {
     const pendingPhotos = photos.filter(photo => photo.status === 'pending')
     if (pendingPhotos.length === 0) return
 
+    console.log('🚀 Début upload de', pendingPhotos.length, 'photos')
     setIsUploading(true)
 
     try {
       const folderName = generateFolderName()
       setCurrentFolder(folderName)
+      console.log('📁 Dossier cible:', folderName)
 
       for (const photo of pendingPhotos) {
+        console.log('📸 Upload de:', photo.file.name)
+        
         setPhotos(prev => prev.map(p => 
           p.id === photo.id 
             ? { ...p, status: 'uploading', progress: 0 }
@@ -53,6 +59,7 @@ const PhotoUploader: React.FC = () => {
 
         try {
           const result = await uploadPhotosToSMB([photo.file], folderName, (progress) => {
+            console.log(`📊 Progression ${photo.file.name}:`, progress + '%')
             setPhotos(prev => prev.map(p => 
               p.id === photo.id 
                 ? { ...p, progress }
@@ -60,12 +67,16 @@ const PhotoUploader: React.FC = () => {
             ))
           })
 
+          console.log('✅ Upload réussi:', photo.file.name, '→', result.paths[0])
+          
           setPhotos(prev => prev.map(p => 
             p.id === photo.id 
               ? { ...p, status: 'success', progress: 100, path: result.paths[0] }
               : p
           ))
         } catch (error) {
+          console.error('❌ Erreur upload:', photo.file.name, error)
+          
           setPhotos(prev => prev.map(p => 
             p.id === photo.id 
               ? { ...p, status: 'error', error: error instanceof Error ? error.message : 'Erreur inconnue' }
@@ -75,6 +86,7 @@ const PhotoUploader: React.FC = () => {
       }
     } finally {
       setIsUploading(false)
+      console.log('🏁 Upload terminé')
     }
   }
 
@@ -140,6 +152,15 @@ const PhotoUploader: React.FC = () => {
               Upload de Photos
             </h2>
           </div>
+          
+          <button
+            onClick={() => setShowLogs(true)}
+            className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Voir les logs de débogage"
+          >
+            <Terminal className="h-4 w-4" />
+            <span>Logs</span>
+          </button>
           
           {currentFolder && (
             <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-lg">
@@ -238,6 +259,8 @@ const PhotoUploader: React.FC = () => {
           </div>
         )}
       </div>
+      
+      <LogViewer isOpen={showLogs} onClose={() => setShowLogs(false)} />
     </div>
   )
 }

@@ -59,19 +59,23 @@ const SMBConfig: React.FC<SMBConfigProps> = ({ onBack }) => {
   }
 
   const handleTestConnection = async () => {
+    console.log('🔍 Début test de connexion SMB')
     setIsTestingConnection(true)
     setConnectionResult(null)
     
     try {
       const result = await checkSMBConnection()
+      console.log('📋 Résultat test:', result)
       setConnectionResult(result)
     } catch (error) {
+      console.error('💥 Erreur test connexion:', error)
       setConnectionResult({
         success: false,
         message: 'Erreur lors du test de connexion'
       })
     } finally {
       setIsTestingConnection(false)
+      console.log('🏁 Test de connexion terminé')
     }
   }
 
